@@ -12,16 +12,10 @@ knitr::opts_chunk$set(echo = TRUE)
 Material is taken directly from the UMass Landscape Ecology lab's multivariate statistics course, specifically from the [data screening lesson](https://www.umass.edu/landeco/teaching/multivariate/schedule/data.screen.pdf). Code was written by An Bui.
 
 ```{r}
-# general use
 library(here)
 library(tidyverse)
-
-# get summary statistics
 library(skimr)
-
-#
 library(naniar)
-
 library(vegan)
 ```
 
