@@ -1,0 +1,218 @@
+---
+title: "Data transformation and standardization"
+author: "An Bui"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# 0. Credits
+Material is taken directly from the UMass Landscape Ecology lab's multivariate statistics course, specifically from the [data screening lesson](https://www.umass.edu/landeco/teaching/multivariate/schedule/data.screen.pdf). Code was written by An Bui.
+
+```{r}
+# general use
+library(here)
+library(tidyverse)
+
+# get summary statistics
+library(skimr)
+
+#
+library(naniar)
+
+library(vegan)
+```
+
+
+# 1. Why screen our data?
+
+Datasets aren't perfect. Sometimes you have missing data, insufficient samples, outliers, and many more things that make your life a little harder. That's where screening comes in - you can check up on what's weird about your data, and fix it using a transformation or a standardization.  
+
+We'll use this fake dataset of bird counts and sites for today.
+
+```{r}
+birds <- read_csv(here::here("week_01", "birds_arent_real.csv"))
+```
+
+
+## 1a. Data screening for errors
+
+Errors occur when there's just something wrong with the raw data. You can look at summary statistics or visualizations to check for irregularities in the data.
+
+```{r}
+# base
+summary(birds)
+
+# fancy options
+skimr::skim(birds)
+naniar::vis_miss(birds)
+```
+
+The recommended action here is to just go through and correct what might be wrong. **Important note:** these are situations where there was human error in entering data, etc. If those missing or weird values are real, then you can move onto the next step.
+
+## 1b. Data screening for missing data
+
+If you want to fill in missing data, you can:  
+  1. replace values with prior knowledge  
+  2. Insert means or medians  
+  3. estimate values using regression  
+
+I imagine the choice for which to use depends on you! For simplicity, I'll just demonstrate replacing medians using `dplyr::mutate()`. In the `mutate_all()` line of code, you're telling R: mutate across all columns following this rule: if there is an NA, replace it with the median.
+```{r}
+new_birds <- birds %>% 
+  mutate_all(~ifelse(is.na(.), median(., na.rm = TRUE), .))
+
+# new_birds <- birds %>% 
+#   mutate_all(~ifelse(is.na(.), mean(., na.rm = TRUE), .))
+```
+
+You can also take those NAs out entirely (omit observations with NAs). That's up to you though.
+
+## 1c. Data screening for sufficiency
+
+Sometimes you're going to get insufficiently sampled variables - for example, rare species in a community dataset. Alternatively, you may get overrepresented variables - for example, abundant species in a dataset. Even further, you could get variables with no meaningful pattern in the data.  
+
+If you want to discard variables (columns) based on abundance, you can do that with `purrr::discard()`. As an example, I'll discard all species with NAs for more than or equal to 5% of observations (**not** a realistic cut off!! Just an example!).  
+
+What you're telling R is: for each column in the data frame `birds`, evaluate if the percent of NAs in the column is greater than 5, and if so discard.
+
+```{r}
+birds %>% 
+  purrr::discard(~ sum(is.na(.x))/length(.x) * 100 >= 5)
+```
+
+# 2. Transformations and standardizations
+
+Sometimes you need to transform or standardize your data to:  
+  1. improve assumptions of normality, linearity, homogeneity of variance, etc.  
+  2. make units of variables comparable when measured on different scales (very common!)  
+  3. make distance measures work better  
+  4. reduce effect of total quantity in sample units to put focus on relative quantities  
+  5. equalize or alter relative importance of variables  
+  6. emphasize informative variables at the expense of uninformative variables  
+
+**Transformations** are applied to each element of the data matrix and are independent of the other elements. **Standardizations** adjust matrix elements by rows or column standards (like max, min, sum, etc.)  
+
+## 2a. Transformations
+
+You can transform your data matrix when you have:  
+  - highly skewed variables  
+  - to meet assumptions of statistical tests  
+  - to emphasize presence/absence  
+  
+Generally, presence/absence transformations are useful when you have a high number of 0s, low number of distinct values, and high beta diversity. Log or square root transformations are good for highly skewed data ranging over several orders of magnitude. Arcsine squareroot transformations are useful for proportion data. Some of these transformations are available using `vegan::decostand()`. 
+  
+### i. binary presence absence
+
+This converts quantitative data (abundance) to nonquantitative data (presence/absence). It can be useful when there's little quantitative information present, but it's a big transformation.  
+Using `dplyr::mutate_all()` to replace all values in `new_birds` that are greater than 1 with 1.
+
+```{r}
+new_birds %>% 
+  mutate_all(~replace(., . > 1, 1))
+
+decostand(new_birds, method = "pa")
+```
+
+### ii. log transformation
+
+Log transforming compresses high values and spreads low values by expressing those values as orders of magnitude. It's useful when there's a high degree of variation in abundance data or highly positively skewed data. Log transformation takes the form of taking the log of whatever it is that you're transforming and adding 1. You can choose the base of your log based on how much you want those values to be compressed.
+
+```{r}
+new_birds %>% 
+  mutate_if(is.numeric, ~ ifelse(. > 0, (log2(.) + 1), 0))
+
+decostand(new_birds, method = "log")
+```
+
+### iii. square root transformation
+
+This has a similar effect to but is less dramatic than the log transform. It's often used with count data when the mean is equal to the variance (or things follow in Poisson distribution).
+
+```{r}
+sqrt(new_birds)
+```
+
+### iv. power transformations
+
+These raise the matrix to some power (a square root transformation is a power transformation to the 0.5). Different exponents change the effect of the transformation - the smaller the exponent, the more compression applied to higher values. It's flexible for a wide variety of data.
+
+```{r}
+(new_birds)^0.5
+(new_birds)^0.3
+```
+
+### v. Arcsin square root transformation
+
+This spreads the end of the scale while compressing the middle. It's useful for proportion data with positive skew (if you have negative skew, you can use the arcsine transfomration without the square root).
+
+```{r}
+(2/pi)*asin(sqrt(new_birds))
+```
+
+## 2b. Standardizations
+
+Standardizations are useful when you want to place unequal sample units or variables on equal footing. They can also better represent patterns. The effects of standardization vary amongst datasets, but generally the more variability amongst rows or columns, the larger the effect on the results.    
+
+Standardizations adjust matrices by row or column standards, and all standardizations can be applied to either rows or columns (or both).  
+
+If you want to adjust for differences among variables (species), then you'll want to use a column standardization. This is useful when you want to focus across sample units. Alternatively, if the focus is within a sample unit, then you can do a row standardization to adjust for differences amongst sample units.  
+
+A lot of these standardization methods are available with the function `vegan::decostand()`. In `decostand()`, the `MARGIN` argument refers to the standarization happening across rows or columns: `MARGIN = 1` is for rows, and `MARGIN = 2` is for columns. Some of the `MARGIN` arguments are default, but it might be good practice to specify directly.  
+
+### Z-score
+
+This converts data to z-scores where the mean is 0 and the variance is 1. It's used to place variables (species) on equal footing. It's also useful when variables have different scales or units of measurement. The Z is (x - mean)/standard deviation.  
+
+You can use `apply()` to apply the function to calculate Z-scores across all columns in the data frame. Shout out to stack overflow, fr.
+
+```{r}
+apply(new_birds[, 1:7], 2, function(x) (x - mean(x))/sd(x))
+```
+
+### Column total and row total
+
+Column total standardizations are used with species data to adjust for unequal abundances amongst species and equalizes areas under curves of species response profiles. The relative abundance profile of samples depends on species' relative abundances across all sites.  
+
+Row total standardizations are used with species data to adjust for unequal abundances amongst sample units. It's the same idea as the column total standardization, except now for sampling units.
+
+```{r}
+# row total
+decostand(new_birds, method = "total", MARGIN = 1)
+
+# column total
+decostand(new_birds, method = "total", MARGIN = 2)
+```
+
+#### Hellinger
+
+This is the square root of the total transformation.
+
+```{r}
+decostand(new_birds, method = "hellinger", MARGIN = 1)
+```
+
+### max
+
+Column max standardizations are similar to column totals except they equalize heights of peaks of species response curves. Because they're based on extreme values, they can introduce noise. Additionally, they can exacerbate the importance of rare species.  
+
+Row max standardizations are similar to row total, except the equalize heights of peaks of sample unit profiles.
+
+```{r}
+# row max
+decostand(new_birds, method = "max", MARGIN = 1)
+
+# column max
+decostand(new_birds, method = "max", MARGIN = 2)
+```
+
+### Wisconsin double standardization
+
+This equalizes emphasis amongst sample units and species. It does come at the cost of diminishing the intuitive meaning for individual data values.
+
+```{r}
+vegan::wisconsin(new_birds)
+```
+
