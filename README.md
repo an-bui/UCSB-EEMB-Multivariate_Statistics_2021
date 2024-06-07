@@ -7,6 +7,8 @@ This is the repo for the grassroots multivariate statistics course led by gradua
 
 Contributors: Austen Apigo, Sam Sambado, Erin Dillon, Jacob Weverka, Robert Fitch, An Bui  
 
+[GitHub repo](https://github.com/an-bui/UCSB-EEMB-Multivariate_Statistics_2021)
+
 ## Materials
 
 - [Data screening and transforming data](https://an-bui.github.io/UCSB-EEMB-Multivariate_Statistics_2021/week_01/week_01-code.html)  
