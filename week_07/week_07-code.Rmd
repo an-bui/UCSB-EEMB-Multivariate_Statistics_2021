@@ -1,7 +1,9 @@
 ---
 title: "Variance Partitioning"
 author: "An Bui"
-output: html_document
+output:
+  html_document:
+    keep_md: yes
 ---
 
 ```{r setup, include=FALSE}
@@ -20,9 +22,7 @@ You can prove to yourself that your predictor variables are related to each othe
 
 Variance partitioning allows you to figure that out by examining the effects of correlated variables all together and separately. The results are usually visualized in a venn diagram showing the unique effects of variables and their overlap.  
 
-```{r echo=FALSE}
-knitr::include_graphics(here::here("week_07/venn.png"))
-```
+![](venn.png)
 
 An example of this is when you have community data with some environmental data taken for each site. You've done a RDA to figure out how much of the variation on community composition is due to your environmental variables, but now you don't necessarily know 1) how much of your environmental variables explain that variation independently of each other/in combination, or 2) how much distance between sites might be contributing to variation in community composition.  
 
@@ -71,9 +71,8 @@ plot(spec.rda)
 
 It seems like MAT and MCMT are somewhat related. We can investigate their relationship with variance partitioning. We'll create a model with only those two variables to look at their relationship with the species frequency data.
 
-```{r echo=FALSE}
-knitr::include_graphics(here::here("week_07/fractions.png"))
-```
+
+![](fractions.png)
 
 ```{r}
 # 1. RDA of full model

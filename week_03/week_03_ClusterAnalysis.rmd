@@ -2,7 +2,9 @@
 title: "MultivariateStats_week03_ClusterAnalysis"
 author: "sbsambado"
 date: "7/8/2021"
-output: html_document
+output:
+  html_document:
+    keep_md: yes
 ---
 
 **This code/text was taken directly from EEMB 146 Lab 9 created by Tatum Katz in Spring of 2020.**
@@ -107,7 +109,7 @@ ggplot(iris, aes(Petal.Length, Petal.Width, color = iris$Species)) +
 Example 3: Non-hierarchical clustering
 > [Non-hierarchical clustering](https://bookdown.org/content/6ef13ea6-4e86-4566-b665-ebcd19d45029/7-4-non-hierarchical-clustering.html)
 
-```{r}
+```{r eval = FALSE}
 
 # you will need to download data from link above - sorry ran out of time to do this!
 library(tidyverse) 
